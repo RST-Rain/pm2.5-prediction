@@ -1,33 +1,61 @@
 import torch
-import pandas as pd
 import numpy as np
-from model import AirQualityTransformer
-from dataset import get_scaler
+import joblib
+from model import AirPollutionModel
 
-def inference(csv_file, start_idx, seq_length=24):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = AirQualityTransformer(input_dim=12).to(device)
-    model.load_state_dict(torch.load('runs/best_model.pth'))
+# Function for inference
+def predict_air_pollution(model_path, scaler_path, new_data):
+    """
+    Predicts PM2.5 for new input data using the trained model and scaler.
+    
+    Args:
+        model_path: Path to the saved model (.pth).
+        scaler_path: Path to the saved scaler (.pkl).
+        new_data: Dictionary with features, e.g., 
+                  {'Temperature': 17.0, 'Precipitation': 0, 'RH': 70, 'WS': 2.5, 
+                   'WD': 90, 'SunShine': 0.5, 'GloblRad': 4.0}
+    
+    Returns:
+        Predicted PM2.5 value.
+    """
+    # Load scaler
+    scaler = joblib.load(scaler_path)
+    
+    # Load model
+    input_dim = 7  # Number of features: Temperature, Precipitation, RH, WS, WD, SunShine, GloblRad
+    model = AirPollutionModel(input_dim)
+    model.load_state_dict(torch.load(model_path))
     model.eval()
-
-    # 讀取數據並標準化
-    data = pd.read_csv(csv_file)
-    data = data[data['site_name'] == '古亭'].reset_index(drop=True)
-    scaler = get_scaler(csv_file)
-    features = ['temperature', 'humidity', 'wind_speed', 'precipitation', 'day_of_week', 'is_holiday', 'so2', 'no2', 'co', 'o3']
-    data['wind_dir_sin'] = np.sin(np.radians(data['wind_direction']))
-    data['wind_dir_cos'] = np.cos(np.radians(data['wind_direction']))
-    features += ['wind_dir_sin', 'wind_dir_cos']
-    x = data[features].values[start_idx:start_idx+seq_length]
-    x = scaler.transform(x)
-    x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(device)
-
-    # 推論
+    
+    # Convert new_data to numpy array in correct order
+    features_order = ['Temperature', 'Precipitation', 'RH', 'WS', 'WD', 'SunShine', 'GloblRad']
+    if isinstance(new_data, dict):
+        new_array = np.array([[new_data[feat] for feat in features_order]])
+    else:
+        new_array = np.array([new_data])
+    
+    # Scale the new data
+    new_array_scaled = scaler.transform(new_array)
+    
+    # Predict
     with torch.no_grad():
-        output = model(x)
-        print(f'Predicted PM2.5 concentration: {output.item():.2f} μg/m³')
+        input_tensor = torch.tensor(new_array_scaled, dtype=torch.float32)
+        prediction = model(input_tensor).squeeze().item()
+    
+    return prediction
 
-if __name__ == '__main__':
-    csv_file = 'data/val.csv'
-    start_idx = 0
-    inference(csv_file, start_idx)
+# Example usage
+if __name__ == "__main__":
+    model_path = './model.pth'
+    scaler_path = './scaler.pkl'
+    new_data = {
+        'Temperature': 17.0,
+        'Precipitation': 0,
+        'RH': 70,
+        'WS': 2.5,
+        'WD': 90,
+        'SunShine': 0.5,
+        'GloblRad': 4.0
+    }
+    pred = predict_air_pollution(model_path, scaler_path, new_data)
+    print(f"Predicted PM2.5: {pred}")

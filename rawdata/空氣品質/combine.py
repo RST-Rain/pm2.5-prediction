@@ -4,7 +4,7 @@ import glob
 
 def combine_air_quality_data(input_dir, output_file):
     # 讀取所有 CSV 檔案
-    files = glob.glob(os.path.join(input_dir, "*.csv"))
+    files = glob.glob(os.path.join(input_dir, "空氣品質小時值_臺北市_古亭站*.csv"))
     dfs = []
     
     for file in files:
@@ -44,10 +44,8 @@ def combine_air_quality_data(input_dir, output_file):
     print(f"Generated {output_file} with {len(pivot_data)} rows")
 
 if __name__ == '__main__':
-    input_dir = r"C:\Users\user\Desktop\專\pm2.5-prediction\pm2.5-prediction\datasets"
-    output_file = r"C:\Users\user\Desktop\專\pm2.5-prediction\pm2.5-prediction\data\combined.csv"
-    
-    # 確保輸出目錄存在
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    input_dir = r"./"
+    output_file = r"../../dataset/air_quality_guting_combined.csv"
+
     
     combine_air_quality_data(input_dir, output_file)
