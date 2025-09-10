@@ -22,22 +22,22 @@ def combine_air_quality_data(input_dir, output_file):
     
     # 將污染物數據 pivot 為單行
     pivot_data = data.pivot_table(
-        index=['monitordate', 'sitename'],
+        index='monitordate',
         columns='itemengname',
         values='concentration',
         aggfunc='first'
     ).reset_index()
     
     # 重新命名欄位
-    pivot_data.columns = ['timestamp', 'site_name', 'CO', 'NO2', 'O3', 'PM10', 'PM2.5', 'SO2']
+    pivot_data.columns = ['timestamp', 'CO', 'NO2', 'O3', 'PM10', 'PM2.5', 'SO2']
     
     # 按時間排序
     pivot_data['timestamp'] = pd.to_datetime(pivot_data['timestamp'])
     pivot_data = pivot_data.sort_values('timestamp')
     
     # 選擇最終欄位
-    output_cols = ['timestamp', 'site_name', 'pm25', 'so2', 'no2', 'co', 'o3', 'pm10']
-    pivot_data[output_cols] = pivot_data[['timestamp', 'site_name', 'PM2.5', 'SO2', 'NO2', 'CO', 'O3', 'PM10']]
+    output_cols = ['timestamp', 'pm2.5', 'so2', 'no2', 'co', 'o3', 'pm10']
+    pivot_data[output_cols] = pivot_data[['timestamp', 'PM2.5', 'SO2', 'NO2', 'CO', 'O3', 'PM10']]
     
     # 保存到 CSV
     pivot_data[output_cols].to_csv(output_file, index=False)

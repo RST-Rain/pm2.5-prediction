@@ -5,31 +5,35 @@ import re
 
 pd.set_option('display.max_rows', None)
 
-def combine_month_and_day(month, day):
-    return 
-
 def combine_weather_data(input_dir, output_file):
-    # 讀取所有 CSV 檔案 (466920-2025-*.csv)
-    files = glob.glob(os.path.join(input_dir, "466920-2025-*.csv"))
+    # 讀取所有 CSV 檔案 (466920-YYYY-MM.csv)
+    files = glob.glob(os.path.join(input_dir, "466920-*.csv"))
+    print("找到的檔案：", files)
     dfs = []
     
     for file in files:
         # 讀取 CSV，假設第一行是中文標題，第二行是英文標題
         df = pd.read_csv(file, skiprows=1)  # 跳過第一行中文標題
-        month = re.search(r'-(\d{2})\.csv$', file).group(1)
-        df["month"] = month
-
+        
+        # 從檔名擷取年份與月份
+        match = re.search(r'(\d{4})-(\d{2})\.csv$', file)
+        if match:
+            year, month = match.groups()
+            df["year"] = year
+            df["month"] = month
+        
         dfs.append(df)
     
     # 合併所有檔案
     data = pd.concat(dfs, ignore_index=True)
     
-
+    # 整理日期欄位
     data['month'] = data['month'].astype(str).str.zfill(2)
     data['ObsTime'] = data['ObsTime'].astype(str).str.zfill(2)
 
-    # 生成 datetime 物件
-    data['timestamp'] = pd.to_datetime('2025-' + data['month'] + '-' + data['ObsTime'])
+    # 生成 timestamp
+    data['timestamp'] = pd.to_datetime(data['year'] + '-' + data['month'] + '-' + data['ObsTime'], errors="coerce")
+
     # 選擇需要的欄位並重新命名
     output_cols = [
         'timestamp', 
